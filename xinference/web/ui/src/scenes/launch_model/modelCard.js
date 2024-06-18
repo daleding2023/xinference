@@ -8,6 +8,7 @@ import {
   ExpandLess,
   ExpandMore,
   HelpCenterOutlined,
+  LogoDevOutlined,
   RocketLaunchOutlined,
   UndoOutlined,
   WarningAmber,
@@ -638,6 +639,16 @@ const ModelCard = ({
                     <div className="iconItem">
                       <ChatOutlined className="muiIcon" />
                       <small className="smallText">chat model</small>
+                    </div>
+                  )
+                } else if (
+                  modelData.model_ability &&
+                  modelData.model_ability.includes('code')
+                ) {
+                  return (
+                    <div className="iconItem">
+                      <LogoDevOutlined className="muiIcon" />
+                      <small className="smallText">code model</small>
                     </div>
                   )
                 } else if (
