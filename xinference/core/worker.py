@@ -73,6 +73,9 @@ class WorkerActor(xo.StatelessActor):
         self._main_pool.recover_sub_pool = self.recover_sub_pool
 
         # internal states.
+        self._model_uid_launching_guard: Dict[
+            str, bool
+        ] = {}  # placeholder for model replica_uid is launching/terminating
         self._model_uid_to_model: Dict[str, xo.ActorRefType["ModelActor"]] = {}
         self._model_uid_to_model_spec: Dict[str, ModelDescription] = {}
         self._gpu_to_model_uid: Dict[int, str] = {}
@@ -586,10 +589,10 @@ class WorkerActor(xo.StatelessActor):
         launch_args.pop("kwargs")
         launch_args.update(kwargs)
 
-        event_model_uid, _, __ = parse_replica_model_uid(model_uid)
+        origin_uid, _, __ = parse_replica_model_uid(model_uid)
         try:
             await self._event_collector_ref.report_event(
-                event_model_uid,
+                origin_uid,
                 Event(
                     event_type=EventType.INFO,
                     event_ts=int(time.time()),
@@ -632,50 +635,54 @@ class WorkerActor(xo.StatelessActor):
         assert model_uid not in self._model_uid_to_model
         self._check_model_is_valid(model_name, model_format)
 
-        subpool_address, devices = await self._create_subpool(
-            model_uid, model_type, n_gpu=n_gpu, gpu_idx=gpu_idx
-        )
+        if self.check_model_launch_status(model_uid) is not None:
+            raise ValueError(f"{model_uid} is running")
 
         try:
-            origin_uid, _, _ = parse_replica_model_uid(model_uid)
-            model, model_description = await asyncio.to_thread(
-                create_model_instance,
-                subpool_address,
-                devices,
-                model_uid,
-                model_type,
-                model_name,
-                model_engine,
-                model_format,
-                model_size_in_billions,
-                quantization,
-                peft_model_config,
-                **kwargs,
+            subpool_address, devices = await self._create_subpool(
+                model_uid, model_type, n_gpu=n_gpu, gpu_idx=gpu_idx
             )
-            await self.update_cache_status(model_name, model_description)
-            model_ref = await xo.create_actor(
-                ModelActor,
-                address=subpool_address,
-                uid=model_uid,
-                worker_address=self.address,
-                model=model,
-                model_description=model_description,
-                request_limits=request_limits,
-            )
-            await model_ref.load()
-        except:
-            logger.error(f"Failed to load model {model_uid}", exc_info=True)
-            self.release_devices(model_uid=model_uid)
-            await self._main_pool.remove_sub_pool(subpool_address)
-            raise
+            try:
+                model, model_description = await asyncio.to_thread(
+                    create_model_instance,
+                    subpool_address,
+                    devices,
+                    model_uid,
+                    model_type,
+                    model_name,
+                    model_engine,
+                    model_format,
+                    model_size_in_billions,
+                    quantization,
+                    peft_model_config,
+                    **kwargs,
+                )
+                await self.update_cache_status(model_name, model_description)
+                model_ref = await xo.create_actor(
+                    ModelActor,
+                    address=subpool_address,
+                    uid=model_uid,
+                    worker_address=self.address,
+                    model=model,
+                    model_description=model_description,
+                    request_limits=request_limits,
+                )
+                await model_ref.load()
+            except:
+                logger.error(f"Failed to load model {model_uid}", exc_info=True)
+                self.release_devices(model_uid=model_uid)
+                await self._main_pool.remove_sub_pool(subpool_address)
+                raise
 
-        self._model_uid_to_model[model_uid] = model_ref
-        self._model_uid_to_model_spec[model_uid] = model_description
-        self._model_uid_to_addr[model_uid] = subpool_address
-        self._model_uid_to_recover_count.setdefault(
-            model_uid, MODEL_ACTOR_AUTO_RECOVER_LIMIT
-        )
-        self._model_uid_to_launch_args[model_uid] = launch_args
+            self._model_uid_to_model[model_uid] = model_ref
+            self._model_uid_to_model_spec[model_uid] = model_description
+            self._model_uid_to_addr[model_uid] = subpool_address
+            self._model_uid_to_recover_count.setdefault(
+                model_uid, MODEL_ACTOR_AUTO_RECOVER_LIMIT
+            )
+            self._model_uid_to_launch_args[model_uid] = launch_args
+        finally:
+            del self._model_uid_launching_guard[model_uid]
 
         # update status to READY
         abilities = await self._get_model_ability(model, model_type)
@@ -686,10 +693,13 @@ class WorkerActor(xo.StatelessActor):
 
     @log_async(logger=logger)
     async def terminate_model(self, model_uid: str):
-        event_model_uid, _, __ = parse_replica_model_uid(model_uid)
+        # Do not terminate model while its launching
+        if model_uid in self._model_uid_launching_guard:
+            raise ValueError(f"{model_uid} is launching")
+        origin_uid, _, replica_id = parse_replica_model_uid(model_uid)
         try:
             await self._event_collector_ref.report_event(
-                event_model_uid,
+                origin_uid,
                 Event(
                     event_type=EventType.INFO,
                     event_ts=int(time.time()),
@@ -700,7 +710,6 @@ class WorkerActor(xo.StatelessActor):
             # Report callback error can be log and ignore, should not interrupt the Process
             logger.error("report_event error: %s" % (e))
 
-        origin_uid, _, _ = parse_replica_model_uid(model_uid)
         await self._status_guard_ref.update_instance_info(
             origin_uid, {"status": LaunchStatus.TERMINATING.name}
         )
@@ -731,6 +740,13 @@ class WorkerActor(xo.StatelessActor):
             await self._status_guard_ref.update_instance_info(
                 origin_uid, {"status": LaunchStatus.TERMINATED.name}
             )
+
+    def check_model_launch_status(self, model_uid: str) -> Optional[str]:
+        if model_uid in self._model_uid_launching_guard:
+            return LaunchStatus.CREATING.name
+        if model_uid in self._model_uid_to_model:
+            return LaunchStatus.READY.name
+        return None
 
     @log_async(logger=logger)
     async def list_models(self) -> Dict[str, Dict[str, Any]]:
