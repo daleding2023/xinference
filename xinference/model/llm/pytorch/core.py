@@ -108,6 +108,7 @@ class PytorchModel(LLM):
         pytorch_model_config.setdefault("device", "auto")
         pytorch_model_config.setdefault("trust_remote_code", True)
         pytorch_model_config.setdefault("max_num_seqs", 16)
+        pytorch_model_config.setdefault("enable_tensorizer", False)
         return pytorch_model_config
 
     def _sanitize_generate_config(
@@ -133,8 +134,33 @@ class PytorchModel(LLM):
                 "Please make sure 'transformers' is installed. ",
                 "You can install it by `pip install transformers`\n",
             ]
-
             raise ImportError(f"{error_message}\n\n{''.join(installation_guide)}")
+
+        # load model from tensorizer
+        enable_tensorizer = self._pytorch_model_config.get("enable_tensorizer", None)
+        from .tensorizer_utils import check_tensorizer_integrity, load_from_tensorizer
+
+        if enable_tensorizer:
+            # from .tensorizer_utils import check_tensorizer_integrity, load_from_tensorizer
+            component_types = [("tokenizer", AutoTokenizer)]
+            model_prefix = "model"
+            if not check_tensorizer_integrity(
+                self.model_path,
+                model_prefix,
+                [component[0] for component in component_types],
+            ):
+                logger.info(
+                    "Tensorizer files are not complete, load model from scratch."
+                )
+            else:
+                model, tokenizer = load_from_tensorizer(
+                    self.model_path,
+                    AutoModelForCausalLM,
+                    None,
+                    model_prefix,
+                    component_types,
+                )
+                return model, tokenizer
 
         tokenizer = AutoTokenizer.from_pretrained(
             self.model_path,
@@ -147,6 +173,21 @@ class PytorchModel(LLM):
             low_cpu_mem_usage=True,
             **kwargs,
         )
+
+        if enable_tensorizer:
+            from .tensorizer_utils import save_to_tensorizer
+
+            save_to_tensorizer(
+                self.model_path,
+                model,
+                None,
+                "model",
+                False,
+                [
+                    ("tokenizer", tokenizer),
+                ],
+            )
+
         return model, tokenizer
 
     def _apply_lora(self):
@@ -246,7 +287,10 @@ class PytorchModel(LLM):
                         f"Only 8-bit quantization is supported if it is not linux system or cuda device"
                     )
                 else:
-                    self._model, self._tokenizer = load_compress_model(
+                    (
+                        self._model,
+                        self._tokenizer,
+                    ) = load_compress_model(
                         model_path=self.model_path,
                         device=self._device,
                         torch_dtype=kwargs["torch_dtype"],
@@ -261,7 +305,6 @@ class PytorchModel(LLM):
             is_device_map_auto = True
 
         self._model, self._tokenizer = self._load_model(**kwargs)
-        self._apply_lora()
 
         if not is_device_map_auto:
             self._model.to(self._device)

@@ -12,11 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from typing import List, Optional
 
 from ....types import LoRA
 from ..llm_family import LLMFamilyV1, LLMSpecV1
 from .core import PytorchChatModel, PytorchModelConfig
+
+logger = logging.getLogger(__name__)
 
 
 class BaichuanPytorchChatModel(PytorchChatModel):
@@ -54,6 +57,37 @@ class BaichuanPytorchChatModel(PytorchChatModel):
 
             raise ImportError(f"{error_message}\n\n{''.join(installation_guide)}")
 
+        # load model from tensorizer
+        enable_tensorizer = self._pytorch_model_config.get("enable_tensorizer", None)
+        if enable_tensorizer:
+            from .tensorizer_utils import (
+                check_tensorizer_integrity,
+                load_from_tensorizer,
+            )
+
+            component_types = [("tokenizer", AutoTokenizer)]
+            model_prefix = "model"
+            if not check_tensorizer_integrity(
+                self.model_path,
+                model_prefix,
+                [component[0] for component in component_types],
+            ):
+                logger.info(
+                    "Tensorizer files are not complete, load model from scratch."
+                )
+            else:
+                model, tokenizer = load_from_tensorizer(
+                    self.model_path,
+                    model_prefix,
+                    AutoModelForCausalLM,
+                    GenerationConfig,
+                    component_types,
+                )
+                model.generation_config = GenerationConfig.from_pretrained(
+                    self.model_path,
+                )
+                return model, tokenizer
+
         tokenizer = AutoTokenizer.from_pretrained(
             self.model_path,
             use_fast=self._use_fast_tokenizer,
@@ -65,6 +99,21 @@ class BaichuanPytorchChatModel(PytorchChatModel):
             **kwargs,
         )
         model.generation_config = GenerationConfig.from_pretrained(self.model_path)
+
+        if enable_tensorizer:
+            from .tensorizer_utils import save_to_tensorizer
+
+            save_to_tensorizer(
+                self.model_path,
+                model,
+                model.generation_config,
+                "model",
+                False,
+                [
+                    ("tokenizer", tokenizer),
+                ],
+            )
+
         return model, tokenizer
 
     @classmethod
