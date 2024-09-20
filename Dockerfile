@@ -1,1 +1,1 @@
-FROM datajuicer/data-juicer:latest
+FROM datajuicer/data-juicer:main
