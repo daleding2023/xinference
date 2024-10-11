@@ -1,1 +1,1 @@
-FROM chat2db/chat2db:latest
+FROM docker.elastic.co/elasticsearch/elasticsearch:8.11.3
