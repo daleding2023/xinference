@@ -1,1 +1,1 @@
-FROM chat2db/chat2db:latest
+FROM infiniflow/ragflow:v0.12.0-slim
