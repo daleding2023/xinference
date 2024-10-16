@@ -1,1 +1,1 @@
-FROM chat2db/chat2db:latest
+FROM qwenllm/qwenvl:2-cu121
