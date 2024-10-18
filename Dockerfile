@@ -1,1 +1,1 @@
-FROM chat2db/chat2db:latest
+FROM openvino/ubuntu22_dev:latest
