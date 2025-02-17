@@ -17,3 +17,11 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 ENV LD_PRELOAD="/usr/lib/x86_64-linux-gnu/libtcmalloc_minimal.so.4:/usr/local/lib/libiomp5.so"
 RUN echo 'ulimit -c 0' >> ~/.bashrc
 RUN pip install intel_extension_for_pytorch==2.5.0
+#############################################################
+WORKDIR /workspace
+ARG PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
+ENV PIP_EXTRA_INDEX_URL=${PIP_EXTRA_INDEX_URL}
+RUN --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=bind,src=requirements-build.txt,target=requirements-build.txt \
+    pip install --upgrade pip && \
+    pip install -r requirements-build.txt
