@@ -2,4 +2,5 @@
 #FROM mongo
 #FROM getmeili/meilisearch:v1.7.3
 #FROM ankane/pgvector:latest
-FROM jhj0517/whisper-webui:latest
+#FROM jhj0517/whisper-webui:latest
+FROM ubuntu:22.04
