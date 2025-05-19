@@ -1,1 +1,1 @@
-FROM infiniflow/infinity:v0.5.0-dev5
+FROM hub.icert.top/opensearchproject/opensearch:2.19.1
