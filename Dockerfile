@@ -5,6 +5,7 @@
 #FROM infiniflow/ragflow:v0.15.0
 #FROM infiniflow/ragflow:v0.15.1-slim
 #FROM infiniflow/ragflow:v0.16.0-slim
-FROM  infiniflow/ragflow:v0.19.1-slim
+#FROM  infiniflow/ragflow:v0.19.1-slim
+FROM  infiniflow/ragflow:v0.20.1-slim
 #FROM infiniflow/ragflow:nightly-slim
 #v0.18.0-qwen3
