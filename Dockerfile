@@ -13,4 +13,8 @@
 #FROM infiniflow/sandbox-executor-manager:latest
 #FROM infiniflow/sandbox-base-nodejs:latest
 #FROM infiniflow/sandbox-base-python:latest
-FROM FROM elasticsearch:8.11.3
+FROM elasticsearch:8.11.3
+#FROM infiniflow/text-embeddings-inference:cpu-1.8
+#FROM infiniflow/text-embeddings-inference:1.8
+#FROM edwardelric233/ragflow:oc9
+#FROM edwardelric233/ragflow:oc9
