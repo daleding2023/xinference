@@ -8,5 +8,8 @@
 #FROM  infiniflow/ragflow:v0.19.1-slim
 #FROM  infiniflow/ragflow:v0.20.1-slim
 #FROM  infiniflow/ragflow:v0.22.0-slim
-FROM infiniflow/ragflow:nightly
-#v0.18.0-qwen3
+#FROM infiniflow/ragflow:nightly
+#FROM infiniflow/ragflow:v0.25.0
+FROM infiniflow/sandbox-executor-manager:latest
+#FROM infiniflow/sandbox-base-nodejs:latest
+#FROM infiniflow/sandbox-base-python:latest
