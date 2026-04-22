@@ -14,7 +14,7 @@
 #FROM infiniflow/sandbox-base-nodejs:latest
 #FROM infiniflow/sandbox-base-python:latest
 #FROM elasticsearch:8.11.3
-FROM infiniflow/text-embeddings-inference:cpu-1.8
-#FROM infiniflow/text-embeddings-inference:1.8
+#FROM infiniflow/text-embeddings-inference:cpu-1.8
+FROM infiniflow/text-embeddings-inference:1.8
 #FROM edwardelric233/ragflow:oc9
 #FROM edwardelric233/ragflow:oc9
