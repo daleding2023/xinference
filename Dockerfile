@@ -12,4 +12,5 @@
 #FROM infiniflow/ragflow:v0.25.0
 #FROM infiniflow/sandbox-executor-manager:latest
 #FROM infiniflow/sandbox-base-nodejs:latest
-FROM infiniflow/sandbox-base-python:latest
+#FROM infiniflow/sandbox-base-python:latest
+FROM FROM elasticsearch:8.11.3
