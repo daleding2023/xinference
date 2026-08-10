@@ -1,1 +1,15 @@
-FROM python:3.8.18
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# 设置python环境
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# 安装系统依赖，pymysql需要
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装python依赖
+RUN pip install --no-cache-dir fastapi uvicorn pymysql
