@@ -1,1 +1,1 @@
-FROM valkey/valkey:8
+FROM onlyoffice/documentserver:latest
