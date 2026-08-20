@@ -17,5 +17,6 @@
 #FROM infiniflow/text-embeddings-inference:cpu-1.8
 #FROM infiniflow/text-embeddings-inference:1.8
 #FROM edwardelric233/ragflow:oc9
-FROM infiniflow/ragflow:nightly
+#FROM infiniflow/ragflow:nightly
 #20260602
+FROM deepdoc_oss:latest
