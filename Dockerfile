@@ -19,4 +19,18 @@
 #FROM edwardelric233/ragflow:oc9
 #FROM infiniflow/ragflow:nightly
 #20260602
-FROM deepdoc_oss:latest
+#FROM deepdoc_oss:latest
+FROM ubuntu:24.04
+
+ARG NEED_MIRROR=1
+
+ENV PYTHONPATH=/app
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ── System dependencies (onnxruntime + opencv runtime libs) ──
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    -o Acquire::Retries=5 \
+    python3.12 python3.12-venv \
+    libglib2.0-0 libglx-mesa0 libgl1 libgomp1 \
+    libgdiplus curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
