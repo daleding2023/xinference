@@ -5,4 +5,5 @@
 #FROM oceanbase/seekdb:latest
 #FROM pgsty/minio:RELEASE.2026-03-25T00-00-00Z
 #FROM kibana:8.11.3
-FROM flink:latest
+#FROM flink:latest
+FROM pgsty/silo:RELEASE.2026-08-06T00-00-00Z
